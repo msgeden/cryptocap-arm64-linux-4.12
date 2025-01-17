@@ -45,6 +45,143 @@ SYSCALL_DEFINE1(arm64_personality, unsigned int, personality)
 	return sys_personality(personality);
 }
 
+
+//#ifdef TARGET_CRYPTO_CAP
+SYSCALL_DEFINE2(dgrant, uint64_t, pc_arg, uint64_t, sp_el0_arg) {
+    
+    printk(KERN_INFO "dgrant entry\n");
+    uint64_t pc, sp, ttbr0_el1, ttbr1_el1, current_task_struct, pstate, tpidr_el0, tpidrro_el0;
+    pc=pc_arg;
+    sp=sp_el0_arg;
+ 
+    asm volatile (
+        "mrs x9, ttbr0_el1\n\t"
+        "str x9, %0\n\t"
+        : "=m" (ttbr0_el1)
+        : 
+        : "x9"
+    );
+    asm volatile (
+        "mrs x9, ttbr1_el1\n\t"
+        "str x9, %0\n\t"
+        : "=m" (ttbr1_el1)
+        : 
+        : "x9"
+    );
+    asm volatile (
+        "mrs x9, tpidr_el1\n\t"
+        "str x9, %0\n\t"
+        : "=m" (current_task_struct)
+        : 
+        : "x9"
+    );
+    
+    // asm volatile (
+    //     "mov x9, sp\n\t"
+    //     "str x9, %0\n\t"
+    //     : "=m" (current_task_struct) //current (task_struct) addresss here
+    //     : 
+    //     : "x9"
+    // );
+
+    // asm volatile (
+    //     "mov x9, sp\n\t"
+    //     "str x9, %0\n\t"
+    //     : "=m" (sp_el1)
+    //     : 
+    //     : "x9"
+    // );
+
+    asm volatile (
+        "mrs x9, spsr_el1 \n\t"
+        "str x9, %0\n\t"
+        : "=m" (pstate)
+        : 
+        : "x9"
+    );
+    asm volatile (
+        "mrs x9, tpidr_el0\n\t"
+        "str x9, %0\n\t"
+        : "=m" (tpidr_el0)
+        : 
+        : "x9"
+    );
+    asm volatile (
+        "mrs x9, tpidrro_el0\n\t"
+        "str x9, %0\n\t"
+        : "=m" (tpidrro_el0)
+        : 
+        : "x9"
+    );
+
+
+    // Set DCLC register fields 
+    asm volatile (
+            "ldr x9, %0\n\t"
+            ".word 0x3600089\n\t"      // cmovcl dclc[0]/PC, x9
+            :
+            :"m"(pc)
+            :"x9" // clobber list 
+    ); 
+    asm volatile (
+            "ldr x9, %0\n\t"
+            ".word 0x3600289\n\t"      // cmovcl dclc[1]/SP, x9
+            :
+            :"m"(sp)
+            :"x9" // clobber list 
+    ); 
+    asm volatile (
+            "ldr x9, %0\n\t"
+            ".word 0x3600489\n\t"      // cmovcl dclc[2]/TTBR0_EL1, x9
+            :
+            :"m"(ttbr0_el1)
+            :"x9" // clobber list 
+    ); 
+    asm volatile (
+            "ldr x9, %0\n\t"
+            ".word 0x3600689\n\t"      // cmovcl dclc[3]/TTBR1_EL1, x9
+            :
+            :"m"(ttbr1_el1)
+            :"x9" // clobber list 
+    ); 
+    asm volatile (
+            "ldr x9, %0\n\t"
+            ".word 0x3600889\n\t"      // cmovcl dclc[4]/CURRENT_TASK_STRUCT, x9
+            :
+            :"m"(current_task_struct)
+            :"x9" // clobber list 
+    ); 
+    asm volatile (
+            "ldr x9, %0\n\t"
+            ".word 0x3600a89\n\t"      // cmovcl dclc[5]/PSTATE, x9
+            :
+            :"m"(pstate)
+            :"x9" // clobber list 
+    ); 
+    asm volatile (
+            "ldr x9, %0\n\t"
+            ".word 0x3600c89\n\t"      // cmovcl dclc[6]/TPIDR, x9
+            :
+            :"m"(tpidr_el0)
+            :"x9" // clobber list 
+    ); 
+     //tpidrro_el0=current->thread.cpu_context.sp;
+     asm volatile (
+            "ldr x9, %0\n\t"
+            ".word 0x3600e89\n\t"      // cmovcl dclc[7]/TPIDRRO, x9
+            :
+            :"m"(tpidrro_el0)
+            :"x9" // clobber list 
+    ); 
+    printk(KERN_INFO "dgrant termination\n");
+    return 0;
+}  
+//#endif	
+
+
+
+
+
 /*
  * Wrappers to pass the pt_regs argument.
  */
