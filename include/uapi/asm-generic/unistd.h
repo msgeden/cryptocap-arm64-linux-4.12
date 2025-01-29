@@ -735,12 +735,20 @@ __SYSCALL(__NR_statx,     sys_statx)
 //#ifdef TARGET_CRYPTO_CAP
 #define __NR_dgrant 292
 __SYSCALL(__NR_dgrant,     sys_dgrant)
+#define __NR_read_cap 294
+__SYSCALL(__NR_read_cap,     sys_read_cap)
+#define __NR_write_cap 295
+__SYSCALL(__NR_write_cap,     sys_write_cap)
+#define __NR_pipe_cap 296
+__SYSCALL(__NR_pipe_cap,     sys_pipe_cap)
+#define __NR_dup2_cap 297
+__SYSCALL(__NR_dup2_cap,     sys_dup2_cap)
 //endif
 
 #undef __NR_syscalls
 //#ifdef TARGET_CRYPTO_CAP
 //#define __NR_syscalls 292
-#define __NR_syscalls 293
+#define __NR_syscalls 298
 //#endif
 /*
  * All syscalls below here should go away really,

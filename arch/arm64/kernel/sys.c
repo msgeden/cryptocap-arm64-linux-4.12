@@ -218,9 +218,28 @@ SYSCALL_DEFINE2(dgrant, uint64_t, pc_arg, uint64_t, sp_el0_arg) {
     printk(KERN_INFO "dgrant termination\n");
     return 0;
 }  
+SYSCALL_DEFINE3(read_cap, unsigned int, fd, char __user *, buf, size_t, count){
+    printk(KERN_INFO "read_cap entry\n");
+    printk(KERN_INFO "read_cap termination\n");
+    return 0;
+}
+SYSCALL_DEFINE3(write_cap, unsigned int, fd, const char __user *, buf,
+		size_t, count){
+    printk(KERN_INFO "write_cap entry\n");
+    printk(KERN_INFO "write_cap termination\n");
+    return 0;
+}
+SYSCALL_DEFINE1(pipe_cap, int __user *, fildes){
+    printk(KERN_INFO "pipe_cap entry\n");
+    printk(KERN_INFO "pipe_cap termination\n");
+    return 0;
+}
+SYSCALL_DEFINE2(dup2_cap, unsigned int, oldfd, unsigned int, newfd){
+    printk(KERN_INFO "dup2_cap entry\n");
+    printk(KERN_INFO "dup2_cap termination\n");
+    return 0;
+}
 //#endif	
-
-
 
 
 
