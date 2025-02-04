@@ -907,8 +907,10 @@ asmlinkage long sys_statx(int dfd, const char __user *path, unsigned flags,
 			  unsigned mask, struct statx __user *buffer);
 //#ifdef TARGET_CRYPTO_CAP
 asmlinkage long sys_dgrant(uint64_t pc_arg, uint64_t sp_el0_arg);
-asmlinkage long sys_read_cap(unsigned int fd, char __user *buf, size_t count);
-asmlinkage long sys_write_cap(unsigned int fd, const char __user *buf, size_t count);
+asmlinkage long sys_read_cap(unsigned int fd, char __user *recv_cap);
+asmlinkage long sys_write_cap(unsigned int fd,  char __user *sent_cap);
+//asmlinkage long sys_read_cap(unsigned int fd, char __user *buf, size_t count);
+//asmlinkage long sys_write_cap(unsigned int fd,  char __user *buf, size_t count);
 asmlinkage long sys_pipe_cap(int __user *fildes);
 asmlinkage long sys_dup2_cap(unsigned int oldfd, unsigned int newfd);
 //#endif

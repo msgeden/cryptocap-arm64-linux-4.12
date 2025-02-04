@@ -33,6 +33,8 @@ typedef __kernel_gid32_t	gid_t;
 typedef __kernel_uid16_t        uid16_t;
 typedef __kernel_gid16_t        gid16_t;
 
+
+
 typedef unsigned long		uintptr_t;
 
 #ifdef CONFIG_HAVE_UID16
@@ -227,6 +229,17 @@ struct callback_head {
 
 typedef void (*rcu_callback_t)(struct rcu_head *head);
 typedef void (*call_rcu_func_t)(struct rcu_head *head, rcu_callback_t func);
+
+
+//#ifdef TARGET_CRYPTO_CAP
+typedef struct {
+     unsigned long long perms_base;
+     unsigned int offset;
+     unsigned int size;
+     unsigned long long PT;
+     unsigned long long MAC;
+} cc_dcap;
+//#endif TARGET_CRYPTO_CAP
 
 #endif /*  __ASSEMBLY__ */
 #endif /* _LINUX_TYPES_H */

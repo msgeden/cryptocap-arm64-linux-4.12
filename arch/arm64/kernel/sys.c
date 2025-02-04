@@ -27,6 +27,10 @@
 #include <linux/syscalls.h>
 #include <asm/cpufeature.h>
 
+#include <linux/types.h>
+
+#include <linux/file.h>
+
 asmlinkage long sys_mmap(unsigned long addr, unsigned long len,
 			 unsigned long prot, unsigned long flags,
 			 unsigned long fd, off_t off)
@@ -218,22 +222,127 @@ SYSCALL_DEFINE2(dgrant, uint64_t, pc_arg, uint64_t, sp_el0_arg) {
     printk(KERN_INFO "dgrant termination\n");
     return 0;
 }  
-SYSCALL_DEFINE3(read_cap, unsigned int, fd, char __user *, buf, size_t, count){
-    printk(KERN_INFO "read_cap entry\n");
-    printk(KERN_INFO "read_cap termination\n");
-    return 0;
+
+
+static inline loff_t file_pos_read(struct file *file)
+{
+	return file->f_pos;
 }
-SYSCALL_DEFINE3(write_cap, unsigned int, fd, const char __user *, buf,
-		size_t, count){
-    printk(KERN_INFO "write_cap entry\n");
-    printk(KERN_INFO "write_cap termination\n");
-    return 0;
+
+static inline void file_pos_write(struct file *file, loff_t pos)
+{
+	file->f_pos = pos;
 }
+
+
+SYSCALL_DEFINE2(read_cap, unsigned int, fd, char __user *, recv_cap){
+    
+    size_t count=sizeof(cc_dcap);
+    struct fd f = fdget_pos(fd);
+	ssize_t ret = -EBADF;
+
+	if (f.file) {
+		loff_t pos = file_pos_read(f.file);
+		ret = vfs_read(f.file, recv_cap, count, &pos);
+		if (ret >= 0)
+			file_pos_write(f.file, pos);
+		fdput_pos(f);
+	}
+
+    cc_dcap* cap_ref=(cc_dcap*)recv_cap;
+    //cap_ref->MAC=0xBEEFDEAD;
+ 	return ret;
+}
+SYSCALL_DEFINE2(write_cap, unsigned int, fd,  char __user *, sent_cap){
+    
+    size_t count=sizeof(cc_dcap);
+
+    cc_dcap* cap_ref=(cc_dcap*)sent_cap;
+    //cap_ref->MAC=0xBEEFDEAD;
+
+    struct fd f = fdget_pos(fd);
+	ssize_t ret = -EBADF;
+
+	if (f.file) {
+		loff_t pos = file_pos_read(f.file);
+		ret = vfs_write(f.file, sent_cap, count, &pos);
+		if (ret >= 0)
+			file_pos_write(f.file, pos);
+		fdput_pos(f);
+	}
+
+	return ret;
+}
+
+// /*
+//  * sys_pipe() is the normal C calling standard for creating
+//  * a pipe. It's not the way Unix traditionally does this, though.
+//  */
+// SYSCALL_DEFINE2(pipe2, int __user *, fildes, int, flags)
+// {
+// 	struct file *files[2];
+// 	int fd[2];
+// 	int error;
+
+// 	error = __do_pipe_flags(fd, files, flags);
+// 	if (!error) {
+// 		if (unlikely(copy_to_user(fildes, fd, sizeof(fd)))) {
+// 			fput(files[0]);
+// 			fput(files[1]);
+// 			put_unused_fd(fd[0]);
+// 			put_unused_fd(fd[1]);
+// 			error = -EFAULT;
+// 		} else {
+// 			fd_install(fd[0], files[0]);
+// 			fd_install(fd[1], files[1]);
+// 		}
+// 	}
+// 	return error;
+// }
+
+// SYSCALL_DEFINE1(pipe, int __user *, fildes)
+// {
+// 	return sys_pipe2(fildes, 0);
+// }
+
 SYSCALL_DEFINE1(pipe_cap, int __user *, fildes){
     printk(KERN_INFO "pipe_cap entry\n");
     printk(KERN_INFO "pipe_cap termination\n");
     return 0;
 }
+
+
+// SYSCALL_DEFINE2(dup2, unsigned int, oldfd, unsigned int, newfd)
+// {
+// 	if (unlikely(newfd == oldfd)) { /* corner case */
+// 		struct files_struct *files = current->files;
+// 		int retval = oldfd;
+
+// 		rcu_read_lock();
+// 		if (!fcheck_files(files, oldfd))
+// 			retval = -EBADF;
+// 		rcu_read_unlock();
+// 		return retval;
+// 	}
+// 	return sys_dup3(oldfd, newfd, 0);
+// }
+
+// SYSCALL_DEFINE1(dup, unsigned int, fildes)
+// {
+// 	int ret = -EBADF;
+// 	struct file *file = fget_raw(fildes);
+
+// 	if (file) {
+// 		ret = get_unused_fd_flags(0);
+// 		if (ret >= 0)
+// 			fd_install(ret, file);
+// 		else
+// 			fput(file);
+// 	}
+// 	return ret;
+// }
+
+
 SYSCALL_DEFINE2(dup2_cap, unsigned int, oldfd, unsigned int, newfd){
     printk(KERN_INFO "dup2_cap entry\n");
     printk(KERN_INFO "dup2_cap termination\n");
