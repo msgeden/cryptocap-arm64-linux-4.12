@@ -28,8 +28,12 @@
 #include <asm/cpufeature.h>
 
 #include <linux/types.h>
+#include <asm/cryptocap.h>
 
 #include <linux/file.h>
+
+
+
 
 asmlinkage long sys_mmap(unsigned long addr, unsigned long len,
 			 unsigned long prot, unsigned long flags,
@@ -234,43 +238,113 @@ static inline void file_pos_write(struct file *file, loff_t pos)
 	file->f_pos = pos;
 }
 
+// SYSCALL_DEFINE3(read_cap, unsigned int, fd, char __user *, buf, size_t, count)
+// {
+// 	struct fd f = fdget_pos(fd);
+// 	ssize_t ret = -EBADF;
 
-SYSCALL_DEFINE2(read_cap, unsigned int, fd, char __user *, recv_cap){
-    
-    size_t count=sizeof(cc_dcap);
+// 	if (f.file) {
+// 		loff_t pos = file_pos_read(f.file);
+// 		ret = vfs_read(f.file, buf, count, &pos);
+// 		if (ret >= 0)
+// 			file_pos_write(f.file, pos);
+// 		fdput_pos(f);
+// 	}
+// 	return ret;
+// }
+
+
+// SYSCALL_DEFINE3(write_cap, unsigned int, fd, const char __user *, buf, size_t, count)
+// {
+//     struct fd f = fdget_pos(fd);
+//     ssize_t ret = -EBADF;
+
+//     if (f.file) {
+//         loff_t pos = file_pos_read(f.file);
+//         ret = vfs_write(f.file, buf, count, &pos);
+//         if (ret >= 0)
+//             file_pos_write(f.file, pos);
+//         fdput_pos(f);
+//     }
+
+//     return ret;
+// }
+
+SYSCALL_DEFINE3(read_cap, unsigned int, fd, char __user *, buf, size_t, count) {
+
     struct fd f = fdget_pos(fd);
-	ssize_t ret = -EBADF;
+    ssize_t ret = -EBADF;
 
-	if (f.file) {
-		loff_t pos = file_pos_read(f.file);
-		ret = vfs_read(f.file, recv_cap, count, &pos);
-		if (ret >= 0)
-			file_pos_write(f.file, pos);
-		fdput_pos(f);
-	}
-
-    cc_dcap* cap_ref=(cc_dcap*)recv_cap;
-    //cap_ref->MAC=0xBEEFDEAD;
- 	return ret;
+    if (f.file) {
+        struct inode *inode = file_inode(f.file);
+        loff_t pos = file_pos_read(f.file);
+        //if the file is for pipe and size is greater than threshold
+        if (S_ISFIFO(inode->i_mode) && (count >  CC_CAP_THRESHOLD_SIZE)) {
+            ipc_cap_msg msg;
+            // read control message (PID + capability)
+            //printk(KERN_INFO "pre-read cap with pos: %p", &pos);
+            ret = vfs_read(f.file, (char*)&msg, sizeof(ipc_cap_msg), &pos);
+            if (ret >= 0)
+    			file_pos_write(f.file, pos);
+            fdput_pos(f);
+            //printk(KERN_INFO "post-read cap with ret: %d and pos: %p\n", ret, &pos); cc_print_cap(msg.cap);
+            if (ret != sizeof(ipc_cap_msg)) {
+                 ret = -EINVAL;  // Invalid control message
+            }
+            if (count > msg.cap.size) 
+                ret = msg.cap.size;
+            else // (count <= msg.cap.size)
+                ret = count;
+            cc_memcpy_i8(buf, msg.cap, ret);
+            // resume the writer
+            struct task_struct *writer = find_task_by_vpid(msg.pid);
+            if (writer) 
+                send_sig(SIGCONT, writer, 0); 
+        } else {
+            //normal read 
+            ret = vfs_read(f.file, buf, count, &pos);
+            if (ret >= 0)
+                file_pos_write(f.file, pos);
+            fdput_pos(f);
+        }
+    }
+    return ret;
 }
-SYSCALL_DEFINE2(write_cap, unsigned int, fd,  char __user *, sent_cap){
-    
-    size_t count=sizeof(cc_dcap);
 
-    cc_dcap* cap_ref=(cc_dcap*)sent_cap;
-    //cap_ref->MAC=0xBEEFDEAD;
+SYSCALL_DEFINE3(write_cap, unsigned int, fd, const char __user *, buf, size_t, count){
+
 
     struct fd f = fdget_pos(fd);
 	ssize_t ret = -EBADF;
 
 	if (f.file) {
 		loff_t pos = file_pos_read(f.file);
-		ret = vfs_write(f.file, sent_cap, count, &pos);
-		if (ret >= 0)
-			file_pos_write(f.file, pos);
-		fdput_pos(f);
-	}
 
+        //if the file is for pipe and size is greater than threshold
+        if (S_ISFIFO(file_inode(f.file)->i_mode) && count > CC_CAP_THRESHOLD_SIZE) {
+            ipc_cap_msg msg;
+            msg.pid = current->pid;
+            cc_dcap cap = cc_create_signed_cap_on_CR0(buf, 0, count, false);
+            msg.cap = cap;
+            //printk(KERN_INFO "pre-write cap with pos: %p", &pos); cc_print_cap(msg.cap);
+            // write control message instead of user buffer
+            ret = vfs_write(f.file, (const char*)&msg, sizeof(ipc_cap_msg), &pos);
+            if (ret >= 0)
+     			file_pos_write(f.file, pos);
+    		fdput_pos(f);
+            //printk(KERN_INFO "post-write cap with ret: %d and pos: %p\n",ret, &pos); cc_print_cap(msg.cap);
+            if (ret == sizeof(ipc_cap_msg)) {
+                ret = count;  // Return original count, not msg size
+                send_sig(SIGSTOP, current, 0);
+            }
+        }
+        else{
+		    ret = vfs_write(f.file, buf, count, &pos);
+            if (ret >= 0)
+                file_pos_write(f.file, pos);
+            fdput_pos(f);
+        }
+	}
 	return ret;
 }
 

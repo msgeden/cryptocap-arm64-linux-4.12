@@ -3662,3 +3662,15 @@ kdb_send_sig_info(struct task_struct *t, struct siginfo *info)
 		kdb_printf("Signal %d is sent to process %d.\n", sig, t->pid);
 }
 #endif	/* CONFIG_KGDB_KDB */
+
+//#ifdef TARGET_CRYPTO_CAP
+void cc_suspend_process(pid_t pid) {
+    struct task_struct *tsk = find_task_by_vpid(pid);
+    if (tsk) send_sig(SIGSTOP, tsk, 0);
+}
+
+void cc_resume_process(pid_t pid) {
+    struct task_struct *tsk = find_task_by_vpid(pid);
+    if (tsk) send_sig(SIGCONT, tsk, 0);
+}
+//#endif

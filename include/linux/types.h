@@ -229,17 +229,26 @@ struct callback_head {
 
 typedef void (*rcu_callback_t)(struct rcu_head *head);
 typedef void (*call_rcu_func_t)(struct rcu_head *head, rcu_callback_t func);
-
-
 //#ifdef TARGET_CRYPTO_CAP
-typedef struct {
-     unsigned long long perms_base;
-     unsigned int offset;
-     unsigned int size;
-     unsigned long long PT;
-     unsigned long long MAC;
+typedef enum capPermFlags {
+	    READ = 1,
+	    WRITE = 2,
+	    EXEC = 4,
+	    TRANS = 8,
+} capPermFlagsType;
+	
+typedef struct cc_dcap {
+	    uint64_t perms_base;
+	    uint32_t offset;
+	    uint32_t size;
+	    uint64_t PT;
+	    uint64_t MAC;
 } cc_dcap;
-//#endif TARGET_CRYPTO_CAP
-
+	
+typedef struct ipc_cap_msg{
+	    pid_t pid;       // PID of the writer
+	    cc_dcap cap;     // Capability describing the data
+} ipc_cap_msg;
+//#endif	 
 #endif /*  __ASSEMBLY__ */
 #endif /* _LINUX_TYPES_H */
