@@ -640,7 +640,7 @@ SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count) {
             //normal read 
             ret = vfs_read(f.file, buf, count, &pos);
             if (ret >= 0)
-                file_pos_write(f.file, pos);
+                file_pos_write(f.file, pos);  
             fdput_pos(f);
         }
     }
