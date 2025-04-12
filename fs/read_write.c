@@ -597,17 +597,27 @@ SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count) {
 
     struct fd f = fdget_pos(fd);
     ssize_t ret = -EBADF;
+	
+	//printk(KERN_INFO "read count: %d", count);
 
     if (f.file) {
         struct inode *inode = file_inode(f.file);
         loff_t pos = file_pos_read(f.file);
         //if the file is for pipe and size is greater than threshold
+        //if (false) {
         if (S_ISFIFO(inode->i_mode) && (count >  CC_CAP_THRESHOLD_SIZE)) {
             ipc_cap_msg msg;
+			printk(KERN_INFO "PIPE read called with count=%lu\n", count);
             // read control message (PID + capability)
             printk(KERN_INFO "pre-read cap with pos: %p", &pos);
             ret = vfs_read(f.file, (char*)&msg, sizeof(ipc_cap_msg), &pos);
-            if (ret >= 0)
+            
+			if (msg.magic != 0xC0DEFACE) {
+				printk(KERN_INFO "sys_read: invalid cap magic 0x%x — using normal read\n", msg.magic);
+				return vfs_read(f.file, buf, count, &pos);  // fallback to normal read
+			}
+
+			if (ret >= 0)
     			file_pos_write(f.file, pos);
             fdput_pos(f);
             printk(KERN_INFO "post-read cap with ret: %d and pos: %p\n", ret, &pos); cc_print_cap(msg.cap);
@@ -620,7 +630,7 @@ SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count) {
                 ret = count;
             cc_memcpy_i8(buf, msg.cap, ret);
             // resume the writer
-            struct task_struct *writer = find_task_by_vpid(msg.pid);
+            struct task_struct *writer = find_task_by_vpid(msg.pid);c
             if (writer) {
 				printk(KERN_INFO "resuming writer with pid: %d\n", msg.pid);
 				send_sig(SIGCONT, writer, 0); 
@@ -658,13 +668,18 @@ SYSCALL_DEFINE3(write, unsigned int, fd, const char __user *, buf, size_t, count
 
     struct fd f = fdget_pos(fd);
 	ssize_t ret = -EBADF;
+	
+	//printk(KERN_INFO "write count: %d", count);
 
 	if (f.file) {
 		loff_t pos = file_pos_read(f.file);
 
         //if the file is for pipe and size is greater than threshold
+        //if (false) {
         if (S_ISFIFO(file_inode(f.file)->i_mode) && count > CC_CAP_THRESHOLD_SIZE) {
+			printk(KERN_INFO "PIPE write called with count=%lu\n", count);
             ipc_cap_msg msg;
+			msg.magic = 0xC0DEFACE;  // to distinguish caps from normal piped messages
             msg.pid = current->pid;
             cc_dcap cap = cc_create_signed_cap_on_CR0(buf, 0, count, false);
             msg.cap = cap;

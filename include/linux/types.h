@@ -246,6 +246,7 @@ typedef struct cc_dcap {
 } cc_dcap;
 	
 typedef struct ipc_cap_msg{
+		uint32_t magic; 
 	    pid_t pid;       // PID of the writer
 	    cc_dcap cap;     // Capability describing the data
 } ipc_cap_msg;

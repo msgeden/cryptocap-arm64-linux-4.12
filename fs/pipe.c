@@ -26,6 +26,10 @@
 #include <linux/uaccess.h>
 #include <asm/ioctls.h>
 
+#include <asm/cryptocap.h>
+#include <linux/printk.h>
+
+
 #include "internal.h"
 
 /*
@@ -261,7 +265,19 @@ pipe_read(struct kiocb *iocb, struct iov_iter *to)
 
 	do_wakeup = 0;
 	ret = 0;
+
+	//printk(KERN_INFO "pipe_read total_len: %d\n", total_len);
+
 	__pipe_lock(pipe);
+// #ifdef CONFIG_ARM64
+// 	printk(KERN_INFO "pipe_read total_len: %d\n", total_len);
+// 	struct inode *inode = file_inode(filp);
+// 	if (S_ISFIFO(inode->i_mode) && total_len > CC_CAP_THRESHOLD_SIZE) 
+// 	{
+// 		printk(KERN_INFO "pipe_read via cap\n");
+// 	}
+// 	else{
+// #endif
 	for (;;) {
 		int bufs = pipe->nrbufs;
 		if (bufs) {
@@ -336,6 +352,10 @@ pipe_read(struct kiocb *iocb, struct iov_iter *to)
 		}
 		pipe_wait(pipe);
 	}
+// #ifdef CONFIG_ARM64
+// 	}
+// out:
+// #endif
 	__pipe_unlock(pipe);
 
 	/* Signal writers asynchronously that there is more room. */
@@ -345,6 +365,7 @@ pipe_read(struct kiocb *iocb, struct iov_iter *to)
 	}
 	if (ret > 0)
 		file_accessed(filp);
+	
 	return ret;
 }
 
@@ -367,6 +388,8 @@ pipe_write(struct kiocb *iocb, struct iov_iter *from)
 	if (unlikely(total_len == 0))
 		return 0;
 
+	//printk(KERN_INFO "pipe_write total_len: %d\n", total_len);
+
 	__pipe_lock(pipe);
 
 	if (!pipe->readers) {
@@ -375,6 +398,16 @@ pipe_write(struct kiocb *iocb, struct iov_iter *from)
 		goto out;
 	}
 
+
+// #ifdef CONFIG_ARM64
+// printk(KERN_INFO "pipe_write total_len: %d\n", total_len);
+// struct inode *inode = file_inode(filp);
+// if (S_ISFIFO(inode->i_mode) && total_len > CC_CAP_THRESHOLD_SIZE) 
+// {
+// 		printk(KERN_INFO "pipe_write via cap\n");
+// }
+// else{
+// #endif
 	/* We try to merge small writes */
 	chars = total_len & (PAGE_SIZE-1); /* size of the last buffer */
 	if (pipe->nrbufs && chars != 0) {
@@ -475,6 +508,9 @@ pipe_write(struct kiocb *iocb, struct iov_iter *from)
 		pipe_wait(pipe);
 		pipe->waiting_writers--;
 	}
+// #ifdef CONFIG_ARM64
+// 	}
+// #endif
 out:
 	__pipe_unlock(pipe);
 	if (do_wakeup) {
@@ -487,6 +523,7 @@ out:
 			ret = err;
 		sb_end_write(file_inode(filp)->i_sb);
 	}
+
 	return ret;
 }
 

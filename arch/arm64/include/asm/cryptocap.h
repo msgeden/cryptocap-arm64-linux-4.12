@@ -7,7 +7,7 @@
 //#include <stdint.h>
 #include <stdbool.h>
 
-#define CC_CAP_THRESHOLD_SIZE 1024*1024
+#define CC_CAP_THRESHOLD_SIZE 1024*64
 
 
 /* Capability operations */
