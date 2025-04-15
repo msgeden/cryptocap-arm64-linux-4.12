@@ -630,7 +630,7 @@ SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count) {
                 ret = count;
             cc_memcpy_i8(buf, msg.cap, ret);
             // resume the writer
-            struct task_struct *writer = find_task_by_vpid(msg.pid);c
+            struct task_struct *writer = find_task_by_vpid(msg.pid);
             if (writer) {
 				printk(KERN_INFO "resuming writer with pid: %d\n", msg.pid);
 				send_sig(SIGCONT, writer, 0); 
@@ -639,7 +639,7 @@ SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count) {
         } else {
             //normal read 
             ret = vfs_read(f.file, buf, count, &pos);
-            if (ret >= 0)
+            if (ret >= 0) 
                 file_pos_write(f.file, pos);  
             fdput_pos(f);
         }
